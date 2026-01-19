@@ -34,8 +34,8 @@ const Index = () => {
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [toolToDelete, setToolToDelete] = useState<{ id: string; name: string } | null>(null);
 
-  const getToolsForTab = (): Tool[] => {
-    switch (activeTab) {
+  const getToolsForType = (type: ToolType): Tool[] => {
+    switch (type) {
       case 'RAG': return ragTools;
       case 'API': return apiTools;
       case 'MCP': return mcpTools;
@@ -43,13 +43,13 @@ const Index = () => {
     }
   };
 
-  const filteredTools = useMemo(() => {
-    let tools = getToolsForTab();
+  const filterTools = (tools: Tool[]): Tool[] => {
+    let filtered = [...tools];
     
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      tools = tools.filter(
+      filtered = filtered.filter(
         (t) =>
           t.FunctionName.toLowerCase().includes(query) ||
           t.FunctionDescription.toLowerCase().includes(query)
@@ -59,7 +59,7 @@ const Index = () => {
     // Discoverable filter
     if (discoverableFilter !== 'all') {
       const isDiscoverable = discoverableFilter === 'discoverable';
-      tools = tools.filter((t) => {
+      filtered = filtered.filter((t) => {
         if ('discoverable' in t) {
           return t.discoverable === isDiscoverable;
         }
@@ -67,8 +67,12 @@ const Index = () => {
       });
     }
     
-    return tools;
-  }, [activeTab, ragTools, apiTools, mcpTools, actionTools, searchQuery, discoverableFilter]);
+    return filtered;
+  };
+
+  const getFilteredToolsForType = (type: ToolType): Tool[] => {
+    return filterTools(getToolsForType(type));
+  };
 
   const handleAddNew = () => {
     setSelectedTool(null);
@@ -86,7 +90,7 @@ const Index = () => {
   };
 
   const handleDeleteClick = (id: string) => {
-    const tools = getToolsForTab();
+    const tools = getToolsForType(activeTab);
     const tool = tools.find((t) => t.id === id);
     if (tool) {
       setToolToDelete({ id, name: tool.FunctionName });
@@ -233,14 +237,14 @@ const Index = () => {
             {tabConfig.map((tab) => (
               <TabsContent key={tab.value} value={tab.value} className="mt-0">
                 <ToolsTable
-                  tools={filteredTools}
+                  tools={getFilteredToolsForType(tab.value)}
                   toolType={tab.value}
                   onEdit={handleEdit}
                   onDelete={handleDeleteClick}
                   onView={handleView}
                 />
                 <div className="mt-4 text-sm text-muted-foreground">
-                  Showing {filteredTools.length} of {getToolsForTab().length} tools
+                  Showing {getFilteredToolsForType(tab.value).length} of {getToolsForType(tab.value).length} tools
                 </div>
               </TabsContent>
             ))}
